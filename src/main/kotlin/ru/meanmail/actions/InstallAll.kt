@@ -4,6 +4,7 @@ import com.intellij.execution.ExecutionException
 import com.intellij.execution.RunCanceledByUserException
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -18,7 +19,6 @@ import ru.meanmail.psi.PathReq
 import ru.meanmail.psi.RequirementsFile
 import ru.meanmail.psi.UrlReq
 import ru.meanmail.reparseOpenedFiles
-
 
 class InstallAllAction : AnAction() {
 
@@ -39,6 +39,10 @@ class InstallAllAction : AnAction() {
         val title = "Installing ${psiFile.name}"
         val task = InstallTask(requirements, title, psiFile)
         ProgressManager.getInstance().run(task)
+    }
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT // or EDT if this action needs to be run on the UI thread
     }
 
     class InstallTask(

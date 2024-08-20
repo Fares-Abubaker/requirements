@@ -2,6 +2,7 @@ package ru.meanmail.actions
 
 import com.intellij.ide.actions.CreateFileFromTemplateAction
 import com.intellij.ide.actions.CreateFileFromTemplateDialog
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.project.DumbAware
@@ -15,8 +16,12 @@ class CreateRequirementsFileAction : CreateFileFromTemplateAction(
     "Create a new requirements.txt file",
     AllIcons.FILE
 ), DumbAware {
-    override fun buildDialog(project: Project, directory: PsiDirectory,
-                             builder: CreateFileFromTemplateDialog.Builder) {
+
+    override fun buildDialog(
+        project: Project,
+        directory: PsiDirectory,
+        builder: CreateFileFromTemplateDialog.Builder
+    ) {
         builder.setTitle("Create a new requirements.txt file").addKind(
             "Blank Requirements file",
             AllIcons.FILE,
@@ -48,4 +53,7 @@ class CreateRequirementsFileAction : CreateFileFromTemplateAction(
 
     override fun startInWriteAction() = false
 
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT // This action should run on the Event Dispatch Thread
+    }
 }
