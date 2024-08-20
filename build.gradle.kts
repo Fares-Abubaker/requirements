@@ -9,8 +9,8 @@ repositories {
 plugins {
     java
 // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#kotlin-standard-library
-    kotlin("jvm") version "1.6.20"
-    kotlin("plugin.serialization") version "1.6.20"
+    kotlin("jvm") version "1.9.0"
+    kotlin("plugin.serialization") version "1.9.0"
     id("org.jetbrains.intellij") version "1.11.0"
 }
 
@@ -18,8 +18,8 @@ group = config("group")
 version = config("version")
 
 dependencies {
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.6.20")
-    val serializationVersion = "1.4.1"
+    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
+    val serializationVersion = "1.5.1"
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:$serializationVersion")
     compileOnly("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
     implementation("io.sentry:sentry:6.10.0")
