@@ -127,3 +127,4 @@ src/main/gen
 token.txt
 private.pem
 chain.crt
+.idea/
