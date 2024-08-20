@@ -1,3 +1,10 @@
+## 2024.2 (August, 20, 2024)
+
++ **New**: Added support for PyCharm 2024.2
+* **Upgrade**: Updated to Kotlin 1.9.0 for compatibility with the latest IntelliJ platform.
+* **Improve**: Enhanced stability and compatibility with the IntelliJ platform, ensuring smooth integration with the latest features in PyCharm 2024.2.
+* **Fix**: Resolved issues related to Kotlin version mismatches with PyCharm 2024.2 dependencies.
+
 ## 2022.4.1 (December, 25, 2022)
 
 * Fix: Access is allowed from write thread only
