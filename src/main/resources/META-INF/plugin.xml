@@ -1,10 +1,10 @@
 <!--suppress PluginXmlValidity, CheckTagEmptyBody -->
-<idea-plugin url="https://meanmail.dev/plugin/1">
-    <id>ru.meanmail.plugin.requirements</id>
+<idea-plugin url="https://github.com/Fares-Abubaker">
+    <id>ru.faresabubaker.plugin.requirements</id>
     <name>Requirements</name>
     <version>SNAPSHOT</version>
-    <idea-version since-build="203.3645.34"/>
-    <vendor email="plugin@meanmail.ru" url="https://meanmail.dev">meanmail</vendor>
+    <idea-version since-build="242.0"/> <!-- Adjust this to match your target IntelliJ version -->
+    <vendor email="fares.abubaker15@gmail.com" url="https://github.com/Fares-Abubaker">Fares Abubaker</vendor>
     <description></description>
     <change-notes></change-notes>
 
