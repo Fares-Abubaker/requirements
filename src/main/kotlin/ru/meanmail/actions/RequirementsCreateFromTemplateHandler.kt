@@ -25,7 +25,7 @@ class RequirementsCreateFromTemplateHandler : DefaultCreateFromTemplateHandler()
             .findFileByNioPath(Path.of(props[FileTemplate.ATTRIBUTE_FILE_PATH] as String).parent) ?: return
         val sdk = getPythonSdk(project, virtualFile) ?: return
 
-        props["packages"] = getInstalledPackages(sdk).map {
+        props["packages"] = getInstalledPackages(project, sdk).map {
             it.name + "==" + it.version
         }.sortedBy(
             String::lowercase

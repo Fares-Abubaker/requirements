@@ -47,7 +47,7 @@ private class InstalledPackageInspectionVisitor(
             it.pre == null
         }
 
-        val installed = getInstalledVersion(sdk, packageName)
+        val installed = getInstalledVersion(project, sdk, packageName)
         val isInstalledIsActual = installed != null && isVersionActual(element, installed)
         val versionsInfo = getVersionsInfo(
             suitableVersion, installed, latest

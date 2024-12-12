@@ -4,10 +4,13 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.LocalInspectionToolSession
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.psi.PsiElementVisitor
 import ru.meanmail.isInstalled
 import ru.meanmail.psi.NameReq
 import ru.meanmail.quickfix.UninstallPackageQuickFix
+import ru.meanmail.getPythonSdk
 
 class UninstalledPackageInspection : RequirementsInspection() {
     override fun buildVisitor(
@@ -15,22 +18,26 @@ class UninstalledPackageInspection : RequirementsInspection() {
         isOnTheFly: Boolean,
         session: LocalInspectionToolSession
     ): PsiElementVisitor {
-        return UninstalledPackageInspectionVisitor(holder, isOnTheFly, session)
+        val project = session.file.project
+        val sdk = getPythonSdk(session.file)
+        return UninstalledPackageInspectionVisitor(holder, isOnTheFly, session, project, sdk)
     }
 }
 
 class UninstalledPackageInspectionVisitor(
     holder: ProblemsHolder,
     onTheFly: Boolean,
-    session: LocalInspectionToolSession
+    session: LocalInspectionToolSession,
+    private val project: Project,
+    private val pythonSdk: Sdk?
 ) : BaseInspectionVisitor(holder, onTheFly, session) {
     override fun visitNameReq(element: NameReq) {
         if (!onTheFly) {
             return
         }
         val packageName = element.name.text ?: return
-        val sdk = sdk ?: return
-        if (!isInstalled(sdk, packageName)) {
+        val sdk = pythonSdk ?: return
+        if (!isInstalled(project, sdk, packageName)) {
             return
         }
 
