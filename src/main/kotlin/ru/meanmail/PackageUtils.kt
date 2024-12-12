@@ -11,15 +11,21 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
-import com.jetbrains.extensions.getSdk
 import com.jetbrains.python.packaging.*
+import com.jetbrains.python.packaging.PyPackageVersion
+import com.jetbrains.python.packaging.common.PythonPackage
+import com.jetbrains.python.packaging.common.PythonPackageSpecification
+import com.jetbrains.python.packaging.management.PythonPackageManager
+import com.jetbrains.python.packaging.repository.PyPackageRepository
 import com.jetbrains.python.sdk.PythonSdkType
+import com.jetbrains.python.sdk.PythonSdkUtil
 import ru.meanmail.notification.Notifier
+import kotlinx.coroutines.runBlocking
 
 
 fun getPythonSdk(project: Project, virtualFile: VirtualFile): Sdk? {
     val module = ModuleUtil.findModuleForFile(virtualFile, project) ?: return null
-    val moduleSdk = module.getSdk() ?: return null
+    val moduleSdk = PythonSdkUtil.findPythonSdk(module) ?: return null
     if (moduleSdk.sdkType is PythonSdkType) {
         return moduleSdk
     }
@@ -31,46 +37,58 @@ fun getPythonSdk(psiFile: PsiFile): Sdk? {
     return getPythonSdk(psiFile.project, virtualFile)
 }
 
-fun getPackageManager(sdk: Sdk): PyPackageManager {
-    return PyPackageManager.getInstance(sdk)
+fun getPackageManager(project: Project, sdk: Sdk): PythonPackageManager {
+    return PythonPackageManager.forSdk(project, sdk)
 }
 
-fun getPackages(sdk: Sdk): List<PyPackage> {
-    val packageManager = getPackageManager(sdk)
+fun getPackages(project: Project, sdk: Sdk): List<PythonPackage> {
+    val packageManager = getPackageManager(project, sdk)
     return ApplicationManager.getApplication()
-        .executeOnPooledThread<List<PyPackage>> {
+        .executeOnPooledThread<List<PythonPackage>> {
             try {
-                return@executeOnPooledThread packageManager.refreshAndGetPackages(false)
+                return@executeOnPooledThread runBlocking {
+                    packageManager.reloadPackages().getOrThrow()
+                }
             } catch (e: Exception) {
                 return@executeOnPooledThread emptyList()
             }
         }.get() ?: return emptyList()
 }
 
-fun getPackage(sdk: Sdk, packageName: String): PyPackage? {
-    val packages = getPackages(sdk)
+fun getPackage(project: Project, sdk: Sdk, packageName: String): PythonPackage? {
+    val packages = getPackages(project, sdk)
     val canonizedPackageName = canonicalizeName(packageName)
 
     return packages.firstOrNull { canonicalizeName(it.name) == canonizedPackageName }
 }
 
-fun getInstalledPackages(sdk: Sdk): List<PyPackage> {
-    val packages = getPackages(sdk)
+fun getInstalledPackages(project: Project, sdk: Sdk): List<PythonPackage> {
+    val packages = getPackages(project, sdk)
 
-    return packages.filter { it.isInstalled }
+    return packages.filter { !it.isEditableMode }
 }
 
-fun getInstalledVersion(sdk: Sdk, packageName: String): PyPackageVersion? {
-    val pyPackage = getPackage(sdk, packageName) ?: return null
-    if (!pyPackage.isInstalled) {
+fun getInstalledVersion(project: Project, sdk: Sdk, packageName: String): PyPackageVersion? {
+    val pyPackage = getPackage(project, sdk, packageName) ?: return null
+    if (pyPackage.isEditableMode) {
         return null
     }
     return PyPackageVersionNormalizer.normalize(pyPackage.version)
 }
 
-fun isInstalled(sdk: Sdk, packageName: String): Boolean {
-    val pyPackage = getPackage(sdk, packageName) ?: return false
-    return pyPackage.isInstalled
+fun isInstalled(project: Project, sdk: Sdk, packageName: String): Boolean {
+    val pyPackage = getPackage(project, sdk, packageName) ?: return false
+    return !pyPackage.isEditableMode
+}
+
+class PythonPackageSpecificationImpl(
+    override val name: String,
+    override val repository: PyPackageRepository?,
+    override val versionSpecs: String?
+) : PythonPackageSpecification {
+    override fun buildInstallationString(): List<String> {
+        return listOf(name, versionSpecs ?: "")
+    }
 }
 
 fun installPackage(
@@ -80,10 +98,10 @@ fun installPackage(
     version: String,
     onInstalled: (() -> Unit)?
 ) {
-    val installedVersion = getInstalledVersion(sdk, packageName)
+    val installedVersion = getInstalledVersion(project, sdk, packageName)
     if (installedVersion?.presentableText == version) {
         Notifier.notifyInformation(
-            project, "$packageName (${version})", "Successfully installed"
+            project, "$packageName ($version)", "Successfully installed"
         )
         onInstalled?.invoke()
         return
@@ -98,10 +116,15 @@ fun installPackage(
             indicator.isIndeterminate = true
 
             try {
-                val packageManager = getPackageManager(sdk)
+                val packageManager = getPackageManager(project, sdk)
+                val packageSpec = PythonPackageSpecificationImpl(packageName, null, version)
+                val options = listOf<String>() // Add any necessary options here
 
-                packageManager.install("$packageName==$version")
-                val pyPackage = getPackage(sdk, packageName)
+                runBlocking {
+                    packageManager.installPackage(packageSpec, options)
+                }
+
+                val pyPackage = getPackage(project, sdk, packageName)
 
                 if (pyPackage == null || pyPackage.version != version) {
                     Notifier.notifyError(
@@ -139,8 +162,8 @@ fun uninstallPackage(
     packageName: String,
     onUninstalled: (() -> Unit)?
 ) {
-    val installedVersion = getPackage(sdk, packageName)
-    if (installedVersion?.isInstalled != true) {
+    val installedPackage = getPackage(project, sdk, packageName)
+    if (installedPackage == null || installedPackage.isEditableMode) {
         Notifier.notifyInformation(
             project, packageName, "Successfully uninstalled"
         )
@@ -156,9 +179,11 @@ fun uninstallPackage(
             indicator.isIndeterminate = true
 
             try {
-                val packageManager = getPackageManager(sdk)
+                val packageManager = getPackageManager(project, sdk)
 
-                packageManager.uninstall(listOf(installedVersion))
+                runBlocking {
+                    packageManager.uninstallPackage(installedPackage).getOrThrow()
+                }
 
                 Notifier.notifyInformation(
                     project,

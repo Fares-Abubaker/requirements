@@ -10,6 +10,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.psi.PsiFile
+import kotlinx.coroutines.runBlocking
 import ru.meanmail.getPackageManager
 import ru.meanmail.getPythonSdk
 import ru.meanmail.lang.RequirementsLanguage
@@ -19,6 +20,8 @@ import ru.meanmail.psi.PathReq
 import ru.meanmail.psi.RequirementsFile
 import ru.meanmail.psi.UrlReq
 import ru.meanmail.reparseOpenedFiles
+import com.jetbrains.python.packaging.common.PythonPackageSpecification
+import ru.meanmail.PythonPackageSpecificationImpl
 
 class InstallAllAction : AnAction() {
 
@@ -58,20 +61,18 @@ class InstallAllAction : AnAction() {
                     Notifier.notifyError(project, title, "No Sdk")
                     return
                 }
-                val packageManager = getPackageManager(sdk)
+                val packageManager = getPackageManager(project, sdk)
 
                 for (requirement in requirements) {
                     indicator.text = requirement
                     try {
-                        val requirementString = packageManager.parseRequirement(requirement)
-                        if (requirementString != null) {
-                            packageManager.install(listOf(requirementString), emptyList())
-                            Notifier.notifyInformation(
-                                project, requirement, "Successfully installed",
-                            )
-                        } else {
-                            Notifier.notifyError(project, requirement, "Can't install")
+                        val specification = PythonPackageSpecificationImpl(requirement, null, null)
+                        runBlocking {
+                            packageManager.installPackage(specification, emptyList())
                         }
+                        Notifier.notifyInformation(
+                            project, requirement, "Successfully installed",
+                        )
                     } catch (e: ExecutionException) {
                         Notifier.notifyError(project, requirement, e.toString())
                     }
